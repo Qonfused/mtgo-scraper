@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"module": "commonjs",
+		"outDir": "build",
+		"pretty": true,
+		"removeComments": true,
+		"target": "es2019",
+		"types": [
+			"cors",
+			"helmet",
+			"jest",
+			"node-fetch",
+			"node"
+		],
+    "esModuleInterop": true,
+		"resolveJsonModule": true
+	},
+	"exclude": ["node_modules", "build", "src/tests"]
+}

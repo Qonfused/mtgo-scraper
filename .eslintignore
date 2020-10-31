@@ -1,0 +1,4 @@
+node_modules
+bin
+migrations
+src/tools/lib
