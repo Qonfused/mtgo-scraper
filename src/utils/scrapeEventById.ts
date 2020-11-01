@@ -84,7 +84,7 @@ const scrapeEventById = async (id: string) => {
           username,
           url,
           deck,
-          stats,
+          ...stats,
         })
       })
 

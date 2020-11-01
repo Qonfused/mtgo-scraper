@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { database } from '../persistence'
-import { sanitize, scrapeEventById, parsePlayers } from '../utils'
+import { sanitize, scrapeEventById, parseEvent } from '../utils'
 import config from '../config'
 
 const router = Router()
@@ -16,7 +16,7 @@ router.post('/:id', async (req: Request, res: Response) => {
     if (eventExists) return res.status(409).json({ message: `Event: ${id} already exists.` })
 
     const event = await scrapeEventById(id)
-    const eventData = await parsePlayers(event, event.format)
+    const eventData = await parseEvent(event, event.format)
     await database.set(`${event.format}/events/${event.id}`, eventData)
 
     return res.status(200).json(event)
