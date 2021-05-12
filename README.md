@@ -8,20 +8,14 @@ Make sure you have npm and yarn installed. Install dependencies with:
 yarn
 ```
 
-Once it's done start up a local development server with:
+Once it's done scrape today's events with:
 
 ```bash
 yarn start
 ```
 
-To run tests:
+To backdate:
 
 ```bash
-yarn test
-```
-
-To get a production-ready build:
-
-```bash
-yarn build
+yarn start 2014-05-07 2014-05-21
 ```
