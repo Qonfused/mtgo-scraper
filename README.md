@@ -14,7 +14,13 @@ Once it's done scrape today's events with:
 yarn start
 ```
 
-To backdate:
+To backdate to today:
+
+```bash
+yarn start 2014-05-07
+```
+
+To backdate between a range:
 
 ```bash
 yarn start 2014-05-07 2014-05-21
