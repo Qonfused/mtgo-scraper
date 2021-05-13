@@ -7,4 +7,7 @@ import config from './config';
  * @example sql`SELECT * FROM users`
  * @example sql`INSERT INTO users ${sql(user)}`
  */
-export const sql = postgres(config.connectionString);
+export const sql = postgres(config.connectionString, {
+  no_prepare: true,
+  idle_timeout: 7200,
+});

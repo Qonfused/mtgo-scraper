@@ -53,7 +53,7 @@ const run = async () => {
 
           if (data) {
             const [previous] = await sql`SELECT * FROM events WHERE uid = ${data.uid}`;
-            if (previous) console.info(chalk.yellowBright(`${uri} - Entry skipped`));
+            if (previous) console.info(chalk.yellowBright(`${uri} - Event skipped`));
 
             if (!previous) {
               const { players, ...event } = data;
@@ -67,7 +67,7 @@ const run = async () => {
               await Promise.all(
                 players.map(player => {
                   sql.unsafe(
-                    `INSERT INTO results (${Object.keys(player)}) VALUES (${Object.values(
+                    `INSERT INTO results (${Object.keys(player)}) VALUES (${Object.keys(
                       player
                     ).map((_, i) => `$${i + 1}`)})`,
                     Object.values(player).map(v =>
@@ -77,7 +77,7 @@ const run = async () => {
                 })
               );
 
-              console.info(chalk.greenBright(`${uri} - Entry created`));
+              console.info(chalk.greenBright(`${uri} - Event created`));
             }
           }
         }
