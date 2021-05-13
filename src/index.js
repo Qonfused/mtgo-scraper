@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { CronJob } from 'cron';
 import scrapeEvent from './scrapeEvent';
 import { sql } from './database';
 
@@ -29,10 +30,12 @@ const getDates = (startDate, endDate = new Date()) => {
   );
 };
 
-(async () => {
+const runCron = process.argv[2] === 'cron';
+
+const run = async () => {
   try {
     // Create date range and daily event queue
-    const dates = getDates(...process.argv.slice(2));
+    const dates = getDates(...process.argv.slice(runCron ? 3 : 2));
     const queue = EVENT_FORMATS.map(format =>
       EVENT_TYPES.map(type => ({ format, type }))
     ).flat();
@@ -45,31 +48,37 @@ const getDates = (startDate, endDate = new Date()) => {
           // Scrape by URI
           const date = dates[i].toISOString().substring(0, 10);
           const uri = `${format}-${type}-${date}`;
+
           const data = await scrapeEvent(uri);
 
           if (data) {
-            const { players, ...event } = data;
+            const [previous] = await sql`SELECT * FROM events WHERE uid = ${data.uid}`;
+            if (previous) console.info(chalk.yellowBright(`${uri} - Entry skipped`));
 
-            // Delete old entries
-            await sql`DELETE FROM events WHERE uid = ${event.uid}`;
-            await sql`DELETE FROM results WHERE event = ${event.uid}`;
+            if (!previous) {
+              const { players, ...event } = data;
 
-            // Create new entries
-            await sql`INSERT INTO events ${sql(event)}`;
-            await Promise.all(
-              players.map(player => {
-                sql.unsafe(
-                  `INSERT INTO results (${Object.keys(player)}) VALUES (${Object.values(
-                    player
-                  ).map((_, i) => `$${i + 1}`)})`,
-                  Object.values(player).map(v =>
-                    typeof v === 'string' ? v : JSON.stringify(v)
-                  )
-                );
-              })
-            );
+              // Delete old entries
+              await sql`DELETE FROM events WHERE uid = ${event.uid}`;
+              await sql`DELETE FROM results WHERE event = ${event.uid}`;
 
-            console.info(chalk.greenBright(`${uri} - Entry created.`));
+              // Create new entries
+              await sql`INSERT INTO events ${sql(event)}`;
+              await Promise.all(
+                players.map(player => {
+                  sql.unsafe(
+                    `INSERT INTO results (${Object.keys(player)}) VALUES (${Object.values(
+                      player
+                    ).map((_, i) => `$${i + 1}`)})`,
+                    Object.values(player).map(v =>
+                      typeof v === 'string' ? v : JSON.stringify(v)
+                    )
+                  );
+                })
+              );
+
+              console.info(chalk.greenBright(`${uri} - Entry created`));
+            }
           }
         }
       })
@@ -81,4 +90,12 @@ const getDates = (startDate, endDate = new Date()) => {
     console.error(chalk.red(error.stack));
     process.exit(1);
   }
-})();
+};
+
+if (runCron) {
+  // Fetch as WotC posts events
+  const job = new CronJob('* */30 10-15 * * *', run, null, null, 'America/Chicago');
+  job.start();
+} else {
+  run();
+}
