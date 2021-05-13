@@ -21,11 +21,15 @@
     "@babel/plugin-transform-runtime": "^7.14.2",
     "@babel/preset-env": "^7.14.2",
     "chalk": "^4.1.1",
+    "dotenv": "^9.0.2",
     "jsdom": "^16.5.3",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "pg": "^8.6.0",
+    "postgres": "^2.0.0-beta.5"
   },
   "scripts": {
     "start": "babel-node src",
+    "start-database": "docker-compose up -d",
     "build": "rimraf build && babel src -d build",
     "serve": "node build",
     "lint": "eslint src && prettier src --check",

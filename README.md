@@ -19,3 +19,9 @@ To backdate:
 ```bash
 yarn start 2014-05-07 2014-05-21
 ```
+
+To startup a local database:
+
+```bash
+yarn start-database
+```

@@ -28,14 +28,21 @@ const scrapeEvent = async uri => {
     const response = await fetch(eventURL);
     if (response.status !== 200) throw new Error(response.status);
 
+    // Create document context
     const html = await response.text();
-    if (!html) throw new Error('Empty document');
-
     const { document } = new JSDOM(html).window;
+
+    // Get basic event information
+    const [format, type, event, , date] =
+      document
+        .querySelector('span.deck-meta h5')
+        ?.textContent.replace(/#/g, '')
+        .trim()
+        .split(' ') || [];
 
     // Early return if no standings available
     const hasStandings = document.querySelector('table.sticky-enabled');
-    if (!hasStandings) throw new Error('No standings available');
+    if (!hasStandings) return;
 
     // Get player standing stats
     const standings = Array.from(
@@ -69,16 +76,14 @@ const scrapeEvent = async uri => {
         const username = group.querySelector('h4').textContent.replace(/\s\(.+/, '');
 
         // Parse container rows for cards
-        const deck = {
-          mainboard: queryDeckSection(group, '.sorted-by-overview-container'),
-          sideboard: queryDeckSection(group, '.sorted-by-sideboard-container'),
-        };
+        const mainboard = queryDeckSection(group, '.sorted-by-overview-container');
+        const sideboard = queryDeckSection(group, '.sorted-by-sideboard-container');
 
         // Calculate player stats
-        const playerStats = standings.find(
+        const { points, rank, OMWP, GWP, OGWP } = standings.find(
           standing => standing.username.toUpperCase() === username.toUpperCase()
         );
-        const wins = playerStats.points / 3;
+        const wins = points / 3;
         const losses = rounds - wins;
         const record = `${wins}-${losses}`;
 
@@ -86,9 +91,19 @@ const scrapeEvent = async uri => {
         output.push({
           username,
           url,
-          deck,
-          record,
-          ...playerStats,
+          event,
+          deck: {
+            mainboard,
+            sideboard,
+          },
+          stats: {
+            record,
+            points,
+            rank,
+            OMWP,
+            GWP,
+            OGWP,
+          },
         });
 
         return output;
@@ -96,20 +111,10 @@ const scrapeEvent = async uri => {
       []
     );
 
-    if (!players?.length) throw new Error('No player data');
-
-    // Get basic event information
-    const [format, type, id, , date] =
-      document
-        .querySelector('span.deck-meta h5')
-        ?.textContent.replace(/#/g, '')
-        .trim()
-        .split(' ') || [];
-
-    console.info(chalk.greenBright(`${uri} - Entry created.`));
+    if (!players?.length) return;
 
     return {
-      id,
+      uid: event,
       uri,
       format,
       type,
