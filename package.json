@@ -9,28 +9,24 @@
   "main": "src/config.js",
   "private": true,
   "devDependencies": {
-    "eslint": "^7.25.0",
+    "eslint": "^7.27.0",
     "nodemon": "2.0.7",
     "prettier": "^2.2.1",
     "rimraf": "^3.0.2"
   },
   "dependencies": {
-    "@babel/cli": "^7.13.16",
-    "@babel/core": "^7.14.2",
+    "@babel/cli": "^7.14.3",
+    "@babel/core": "^7.14.3",
     "@babel/node": "^7.14.2",
-    "@babel/plugin-transform-runtime": "^7.14.2",
-    "@babel/preset-env": "^7.14.2",
+    "@babel/plugin-transform-runtime": "^7.14.3",
+    "@babel/preset-env": "^7.14.4",
     "chalk": "^4.1.1",
     "cron": "^1.8.2",
-    "dotenv": "^9.0.2",
-    "jsdom": "^16.5.3",
-    "node-fetch": "^2.6.1",
-    "pg": "^8.6.0",
-    "postgres": "^2.0.0-beta.5"
+    "jsdom": "^16.6.0",
+    "node-fetch": "^2.6.1"
   },
   "scripts": {
     "start": "babel-node src",
-    "start-database": "docker-compose up -d",
     "build": "rimraf build && babel src -d build",
     "serve": "node build",
     "lint": "eslint src && prettier src --check",

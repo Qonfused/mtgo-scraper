@@ -1,7 +1,8 @@
 import chalk from 'chalk';
+import { writeFileSync } from 'fs';
+import { resolve } from 'path';
 import { CronJob } from 'cron';
 import scrapeEvent from './scrapeEvent';
-import { sql } from './database';
 
 const EVENT_FORMATS = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
 const EVENT_TYPES = [
@@ -40,49 +41,36 @@ const run = async () => {
       EVENT_TYPES.map(type => ({ format, type }))
     ).flat();
 
+    // Generate events and results
+    const events = [];
+    const results = [];
+
     // Scrape events in parallel
     await Promise.all(
       queue.map(async ({ format, type }) => {
         // Fetch dates synchronously to avoid timeout
         for (let i = 0; i < dates.length; i++) {
-          // Scrape by URI
           const date = dates[i].toISOString().substring(0, 10);
           const uri = `${format}-${type}-${date}`;
 
+          // Scrape by URI
           const data = await scrapeEvent(uri);
 
           if (data) {
-            const [previous] = await sql`SELECT * FROM events WHERE uid = ${data.uid}`;
-            if (previous) console.info(chalk.yellowBright(`${uri} - Event skipped`));
+            const { players, ...event } = data;
 
-            if (!previous) {
-              const { players, ...event } = data;
+            events.push(event);
+            results.push(...players);
 
-              // Delete old entries
-              await sql`DELETE FROM events WHERE uid = ${event.uid}`;
-              await sql`DELETE FROM results WHERE event = ${event.uid}`;
-
-              // Create new entries
-              await sql`INSERT INTO events ${sql(event)}`;
-              await Promise.all(
-                players.map(player => {
-                  sql.unsafe(
-                    `INSERT INTO results (${Object.keys(player)}) VALUES (${Object.keys(
-                      player
-                    ).map((_, i) => `$${i + 1}`)})`,
-                    Object.values(player).map(v =>
-                      typeof v === 'string' ? v : JSON.stringify(v)
-                    )
-                  );
-                })
-              );
-
-              console.info(chalk.greenBright(`${uri} - Event created`));
-            }
+            console.info(chalk.greenBright(`${uri} - Event created`));
           }
         }
       })
     );
+
+    // Write to disk
+    writeFileSync(resolve(process.cwd(), 'events.json'), JSON.stringify(events));
+    writeFileSync(resolve(process.cwd(), 'results.json'), JSON.stringify(results));
 
     // Cleanup
     process.exit(0);
