@@ -52,10 +52,10 @@ const run = async () => {
           const data = await scrapeEvent(uri);
 
           if (data) {
-            const [previous] = await sql`SELECT * FROM events WHERE uid = ${data.uid}`;
-            if (previous) console.info(chalk.yellowBright(`${uri} - Event skipped`));
-
-            if (!previous) {
+            let [events] = await sql`SELECT * FROM events WHERE uid = ${data.uid}`;
+            let [results] = await sql`SELECT * FROM results WHERE event = ${data.uid}`;
+            if (events && results) console.info(chalk.yellowBright(`${uri} - Event skipped`));
+            else {
               const { players, ...event } = data;
 
               // Delete old entries
@@ -67,12 +67,8 @@ const run = async () => {
               await Promise.all(
                 players.map(player => {
                   sql.unsafe(
-                    `INSERT INTO results (${Object.keys(player)}) VALUES (${Object.keys(
-                      player
-                    ).map((_, i) => `$${i + 1}`)})`,
-                    Object.values(player).map(v =>
-                      typeof v === 'string' ? v : JSON.stringify(v)
-                    )
+                    `INSERT INTO results (${Object.keys(player)}) VALUES (${Object.keys(player).map((_, i) => `$${i + 1}`)})`,
+                    Object.values(player).map(v => typeof v === 'string' ? v : JSON.stringify(v))
                   );
                 })
               );

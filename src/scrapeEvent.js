@@ -70,7 +70,7 @@ const scrapeEvent = async uri => {
 
     // Parse deck groups for player meta, decks
     const players = Array.from(document.querySelectorAll('.deck-group')).reduce(
-      (output, group) => {
+      (output, group, i) => {
         // Get basic player information
         const url = `${eventURL}#${group.id}`;
         const username = group.querySelector('h4').textContent.replace(/\s\(.+/, '');
@@ -80,12 +80,14 @@ const scrapeEvent = async uri => {
         const sideboard = queryDeckSection(group, '.sorted-by-sideboard-container');
 
         // Calculate player stats
-        const { points, rank, OMWP, GWP, OGWP } = standings.find(
+        const { points, _rank, OMWP, GWP, OGWP } = standings.find(
           standing => standing.username.toUpperCase() === username.toUpperCase()
         );
         const wins = points / 3;
         const losses = rounds - wins;
         const record = `${wins}-${losses}`;
+        // Get rank at index 'i' in standings to correct for shift in results after top 8
+        const rank = standings[i].rank;
 
         // Create player object
         output.push({
