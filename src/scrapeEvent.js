@@ -33,12 +33,22 @@ const scrapeEvent = async uri => {
     const { document } = new JSDOM(html).window;
 
     // Get basic event information
-    const [format, type, event, , date] =
+    // [format, type, event, , date]
+    const groupTitle =
       document
         .querySelector('span.deck-meta h5')
         ?.textContent.replace(/#/g, '')
         .trim()
         .split(' ') || [];
+
+      const format = groupTitle[0];
+      const date = groupTitle[groupTitle.length - 1];
+      const event = groupTitle[groupTitle.length - 3];
+
+      groupTitle.splice(1, 1);
+      groupTitle.splice(groupTitle.length - 3, 3);
+
+      const type = groupTitle.join(' ');
 
     // Early return if no standings available
     const hasStandings = document.querySelector('table.sticky-enabled');
