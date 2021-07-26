@@ -18,9 +18,11 @@ CREATE TABLE IF NOT EXISTS results (
   event bigint NOT NULL REFERENCES events (uid) ON DELETE CASCADE,
   url text NOT NULL,
   deck jsonb NOT NULL,
-  stats jsonb NOT NULL
+  stats jsonb NOT NULL,
+  archetype jsonb NOT NULL
 );
 
 CREATE INDEX results_uid on results (uid);
 CREATE INDEX results_username on results (username);
 CREATE INDEX results_event on results (event);
+CREATE INDEX results_archetype on results (archetype);

@@ -1,9 +1,17 @@
 import chalk from 'chalk';
 import { CronJob } from 'cron';
+import usePuppeteerStealth from './puppeteer'
 import scrapeEvent from './scrapeEvent';
-import { sql } from './database';
+import { sql, updateDatabase } from './database';
 
-const EVENT_FORMATS = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
+const EVENT_FORMATS = [
+  'standard',
+  'pioneer',
+  'modern',
+  'legacy',
+  'vintage',
+  'pauper'
+];
 const EVENT_TYPES = [
   'mocs',
   'preliminary',
@@ -34,13 +42,25 @@ const runCron = process.argv[2] === 'cron';
 
 const run = async () => {
   try {
+    // Clear console
+    process.stdout.write('\x1Bc');
+    console.log('Scraping WotC Events...');
     // Create date range and daily event queue
-    const dates = getDates(...process.argv.slice(runCron ? 3 : 2));
+    let args = process.argv.slice(2);
+    if (process.argv[2] === 'cron') args = args.splice(indexOf('cron') - 2, 1);
+    if (process.argv.includes('--force')) args.splice(args.indexOf('--force') - 2, 1);
+    const dates = getDates(...args);
     const queue = EVENT_FORMATS.map(format =>
       EVENT_TYPES.map(type => ({ format, type }))
     ).flat();
 
-    // Scrape events in parallel
+    const startTime = Date.now();
+
+    // Scrape WotC events in parallel
+    let dbQueue = [];
+    let queueLength = 0;
+    let _queueLength = 0;
+    let goldfishQueue = [];
     await Promise.all(
       queue.map(async ({ format, type }) => {
         // Fetch dates synchronously to avoid timeout
@@ -49,38 +69,95 @@ const run = async () => {
           const date = dates[i].toISOString().substring(0, 10);
           const uri = `${format}-${type}-${date}`;
 
+          const [_events] = await sql`SELECT * FROM events WHERE uri = ${uri}`;
+          if (_events && !process.argv.includes('--force')) {
+            let [results] = await sql`SELECT * FROM results WHERE event = ${_events.uid}`;
+            let archetypes = await sql`SELECT archetype FROM results WHERE event = ${_events.uid}`;
+            archetypes = archetypes.filter(value => Object.keys(value).length !== 0);
+            if (process.argv.includes('--force')) archetypes = [];
+            if (results && archetypes?.length) continue;
+          }
+
           const data = await scrapeEvent(uri);
+          _queueLength += 1;
+
+          const elapsedTime = (Date.now() - startTime) / 1000;
+          const _queueRate = elapsedTime / _queueLength;
+          const _progress = `${((_queueLength / (queue.length * dates.length))*100).toFixed(2)}%`;
+
+          // Get time in nearest days, hours, minutes and seconds
+          let totalSeconds = ((queue.length * dates.length) - _queueLength) * _queueRate;
+          let days = Math.floor(totalSeconds / 86400).toFixed(0);
+          let hours = Math.floor(totalSeconds / 3600).toFixed(0);
+            totalSeconds %= 3600;
+          let minutes = Math.floor(totalSeconds / 60).toFixed(0);
+          let seconds = (totalSeconds % 60).toFixed(0);
+          // Create array of these values to later filter out null values
+          let formattedArray = totalSeconds.toFixed(0) == 0 ? ['', '', '', '0 seconds'] : [
+            days > 0 ? `${ days } ${ (days == 1 ? 'day' : 'days') }` : ``,
+            hours > 0 ? `${ hours } ${ (hours == 1 ? 'hour' : 'hours') }` : ``,
+            minutes > 0 ? `${ minutes } ${ (minutes == 1 ? 'minute' : 'minutes') }` : ``,
+            seconds > 0 ? `${ seconds } ${ (seconds == 1 ? 'second' : 'seconds') }` : ``,
+          ];
+          const timeRemaining = formattedArray
+            .filter(Boolean)
+            .join(', ')
+            // Replace last comma with ' and' for fluency
+            .replace(/, ([^,]*)$/, ' and $1');
 
           if (data) {
             let [events] = await sql`SELECT * FROM events WHERE uid = ${data.uid}`;
             let [results] = await sql`SELECT * FROM results WHERE event = ${data.uid}`;
-            if (events && results) console.info(chalk.yellowBright(`${uri} - Event skipped`));
+
+            let archetypes = await sql`SELECT archetype FROM results WHERE event = ${data.uid}`;
+            archetypes = archetypes.filter(value => Object.keys(value).length !== 0);
+            if (process.argv.includes('--force')) archetypes = [];
+
+            process.stdout.write('\x1Bc');
+            console.log('Scraping WotC Events...');
+            console.log(`${chalk.yellow(`Progress: ${_queueLength}/${(queue.length * dates.length)}`)} (${_progress} complete).`);
+            console.log(`${timeRemaining} remaining.\n`);
+
+            if (events && results && archetypes?.length) {
+              console.info(chalk.yellowBright(`Event skipped: ${uri}`));
+            }
             else {
-              const { players, ...event } = data;
-
-              // Delete old entries
-              await sql`DELETE FROM events WHERE uid = ${event.uid}`;
-              await sql`DELETE FROM results WHERE event = ${event.uid}`;
-
-              // Create new entries
-              await sql`INSERT INTO events ${sql(event)}`;
-              await Promise.all(
-                players.map(player => {
-                  sql.unsafe(
-                    `INSERT INTO results (${Object.keys(player)}) VALUES (${Object.keys(player).map((_, i) => `$${i + 1}`)})`,
-                    Object.values(player).map(v => typeof v === 'string' ? v : JSON.stringify(v))
-                  );
-                })
-              );
-
-              console.info(chalk.greenBright(`${uri} - Event created`));
+              let { players, ...event } = data;
+              dbQueue.push({ players, event });
+              queueLength += players.length;
+              goldfishQueue.push({ format: event.format, type: event.type, uid: event.uid });
+              console.info(chalk.blueBright(`Added to queue: ${uri}`));
             }
           }
         }
       })
     );
 
+    // Clear console
+    process.stdout.write('\x1Bc');
+    console.log('Scraping MTGGoldfish Events...');
+    // Setup Puppeteer
+    const { browser, page } = await usePuppeteerStealth();
+    // Update database entries syncronously
+    let progress = 0;
+    for (let i = 0; i < dbQueue?.length; i++) {
+      const { players, event } = dbQueue[i];
+      try {
+        await updateDatabase(players, event, page,
+          { i, progress, dbQueue, queueLength },
+        );
+      } catch (error) {
+        const uri = `${event.format}-${event.type}-${event.date.replaceAll('/','-')}`
+        console.log(`Error: ${uri} (${i + 1}/${dbQueue.length})`);
+        console.error(chalk.red(error.stack));
+        process.exit(1);
+      }
+      progress += players.length + 1;
+    }
+
     // Cleanup
+    await page.close();
+    await browser.close();
     process.exit(0);
   } catch (error) {
     console.error(chalk.red(error.stack));

@@ -38,15 +38,16 @@ const scrapeEvent = async uri => {
       document
         .querySelector('span.deck-meta h5')
         ?.textContent.replace(/#/g, '')
+        .replace(' on', '')
         .trim()
         .split(' ') || [];
 
       const format = groupTitle[0];
       const date = groupTitle[groupTitle.length - 1];
-      const event = groupTitle[groupTitle.length - 3];
+      const event = groupTitle[groupTitle.length - 2];
 
-      groupTitle.splice(1, 1);
-      groupTitle.splice(groupTitle.length - 3, 3);
+      groupTitle.splice(0, 1);
+      groupTitle.splice(groupTitle.length - 2, 2);
 
       const type = groupTitle.join(' ');
 
@@ -91,7 +92,7 @@ const scrapeEvent = async uri => {
 
         // Calculate player stats
         const { points, _rank, OMWP, GWP, OGWP } = standings.find(
-          standing => standing.username.toUpperCase() === username.toUpperCase()
+          standing => standing.username.toString().toUpperCase() === username.toUpperCase()
         );
         const wins = points / 3;
         const losses = rounds - wins;
@@ -134,7 +135,7 @@ const scrapeEvent = async uri => {
       players,
     };
   } catch (error) {
-    console.error(chalk.red(`${uri} - ${error.message}`));
+    console.error(chalk.red(`Error: ${uri} - ${error.message}`));
   }
 };
 
