@@ -10,8 +10,9 @@ import { setDelay, findGoldfishEvent } from './scrapeGoldfish';
  * @example sql`INSERT INTO users ${sql(user)}`
  */
 export const sql = postgres(config.connectionString, {
+  max: 1,
   no_prepare: true,
-  idle_timeout: 7200,
+  idle_timeout: 3,
 });
 
 export const updateDatabase = async (players, event, page, obj) => {
