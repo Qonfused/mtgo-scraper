@@ -33,12 +33,23 @@ const scrapeEvent = async uri => {
     const { document } = new JSDOM(html).window;
 
     // Get basic event information
-    const [format, type, event, , date] =
+    // [format, type, event, , date]
+    const groupTitle =
       document
         .querySelector('span.deck-meta h5')
         ?.textContent.replace(/#/g, '')
+        .replace(' on', '')
         .trim()
         .split(' ') || [];
+
+      const format = groupTitle[0];
+      const date = groupTitle[groupTitle.length - 1];
+      const event = groupTitle[groupTitle.length - 2];
+
+      groupTitle.splice(0, 1);
+      groupTitle.splice(groupTitle.length - 2, 2);
+
+      const type = groupTitle.join(' ');
 
     // Early return if no standings available
     const hasStandings = document.querySelector('table.sticky-enabled');
@@ -70,7 +81,7 @@ const scrapeEvent = async uri => {
 
     // Parse deck groups for player meta, decks
     const players = Array.from(document.querySelectorAll('.deck-group')).reduce(
-      (output, group) => {
+      (output, group, i) => {
         // Get basic player information
         const url = `${eventURL}#${group.id}`;
         const username = group.querySelector('h4').textContent.replace(/\s\(.+/, '');
@@ -80,12 +91,14 @@ const scrapeEvent = async uri => {
         const sideboard = queryDeckSection(group, '.sorted-by-sideboard-container');
 
         // Calculate player stats
-        const { points, rank, OMWP, GWP, OGWP } = standings.find(
-          standing => standing.username.toUpperCase() === username.toUpperCase()
+        const { points, _rank, OMWP, GWP, OGWP } = standings.find(
+          standing => standing.username.toString().toUpperCase() === username.toUpperCase()
         );
         const wins = points / 3;
         const losses = rounds - wins;
         const record = `${wins}-${losses}`;
+        // Get rank at index 'i' in standings to correct for shift in results after top 8
+        const rank = standings[i].rank;
 
         // Create player object
         output.push({
@@ -122,7 +135,7 @@ const scrapeEvent = async uri => {
       players,
     };
   } catch (error) {
-    console.error(chalk.red(`${uri} - ${error.message}`));
+    console.error(chalk.red(`Error: ${uri} - ${error.message}`));
   }
 };
 
