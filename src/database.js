@@ -15,14 +15,7 @@ export const sql = postgres(config.connectionString, {
   idle_timeout: 3,
 });
 
-export const updateDatabase = async (players, event, page, obj) => {
-  const { i, progress, dbQueue, queueLength } = obj;
-  const goldfishData = await findGoldfishEvent(
-    page,
-    event.format, event.type, event.uid,
-    i + 1, progress,
-    dbQueue.length, queueLength,
-  );
+export const updateDatabase = async (players, event) => {
   const uri = `${event.format}-${event.type}-${event.date.replaceAll('/','-')}`;
   let [events] = await sql`SELECT * FROM events WHERE uid = ${event.uid}`;
   let [results] = await sql`SELECT * FROM results WHERE event = ${event.uid}`;

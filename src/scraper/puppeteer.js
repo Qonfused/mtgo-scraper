@@ -1,7 +1,7 @@
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
-const usePuppeteerStealth = async () => {
+export const usePuppeteerStealth = async () => {
   puppeteer.use(StealthPlugin());
   const browser = await puppeteer.launch({
     headless: true,
