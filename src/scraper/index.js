@@ -1,5 +1,3 @@
-import config from '../config.js';
-
 import sql from './database.js';
 
 import usePuppeteerStealth from './puppeteer.js';

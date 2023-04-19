@@ -1,7 +1,7 @@
 import { fetch } from 'undici';
 import { JSDOM } from 'jsdom';
 
-import { EVENT_FORMATS } from '../constants.js';
+import { EVENT_FORMATS } from './constants.js';
 
 
 export async function getCatalog(dates) {
