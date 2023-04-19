@@ -1,8 +1,8 @@
-import { CronJob } from 'cron';
-import { scrapeCatalog } from './scraper/mtgo.js';
+// import { CronJob } from 'cron';
+// import { scrapeCatalog } from './scraper/mtgo.js';
 import { scrape } from './scraper/index.js';
 
-process.removeAllListeners('warning')
+process.removeAllListeners('warning');
 scrape();
 
 // if (process.argv.includes('--watch')) {

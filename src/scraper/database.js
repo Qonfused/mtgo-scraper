@@ -3,7 +3,6 @@ import postgres from 'postgres';
 
 import config from './config.js';
 
-
 /**
  * Queries database, accepts a template string or JSON to format.
  *

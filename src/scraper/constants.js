@@ -4,8 +4,9 @@ export const EVENT_FORMATS = [
   'modern',
   'legacy',
   'vintage',
-  'pauper'
+  'pauper',
 ];
+
 export const EVENT_TYPES = [
   'mocs',
   'preliminary',
